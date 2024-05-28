@@ -82,14 +82,14 @@ def main() -> None:
             main_outpath = Path(logs_dir)
 
         day_outpath: Path = main_outpath.joinpath(timestamp.strftime("%Y%m%d"))
-        minute_outpath: Path = day_outpath.joinpath(timestamp.strftime("%H%M"))
+        hour_outpath: Path = day_outpath.joinpath(timestamp.strftime("%H"))
 
-        if not minute_outpath.is_dir():
-            minute_outpath.mkdir(parents=True, exist_ok=True)
+        if not hour_outpath.is_dir():
+            hour_outpath.mkdir(parents=True, exist_ok=True)
 
         datetimestr: str = timestamp.strftime("%Y%m%d-%H%M%S")
         screenshot_file_name: str = save_screenshot(
-            active_window, active_window_props, minute_outpath, datetimestr
+            active_window, active_window_props, hour_outpath, datetimestr
         )
 
         print(
