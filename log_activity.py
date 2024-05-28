@@ -81,7 +81,8 @@ def main() -> None:
         if logs_dir is not None:
             main_outpath = Path(logs_dir)
 
-        day_outpath: Path = main_outpath.joinpath(timestamp.strftime("%Y%m%d"))
+        datestr: str = timestamp.strftime("%Y%m%d")
+        day_outpath: Path = main_outpath.joinpath(datestr)
         hour_outpath: Path = day_outpath.joinpath(timestamp.strftime("%H"))
 
         if not hour_outpath.is_dir():
@@ -92,9 +93,15 @@ def main() -> None:
             active_window, active_window_props, hour_outpath, datetimestr
         )
 
-        print(
-            f"{datetimestr}: {active_window_props["window_class"]} -- {screenshot_file_name}"
-        )
+        log_str: str = f"{datetimestr}: " + \
+            f"{active_window_props["window_class"]} -- {screenshot_file_name}"
+
+        report_file: Path = day_outpath.joinpath(f"report_{datestr}.md")
+
+        with report_file.open("a") as fw:
+            fw.write(f"{log_str}\n")
+
+        print(log_str)
 
         time.sleep(10)
 
