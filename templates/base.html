@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css" />
+    <title>Activity Logger {{ title }}</title>
+</head>
+<body>
+    <div id="tablecontent">
+        <h1>Activity Logger [{{ title }}]</h1>
+        {% block table %}{% endblock table %}
+    </div>
+    <div id="footer">
+        <hr>
+        {% block footer %}
+        &copy; Copyright 2024 by <a href="https://clutariomark.github.io/">Mark Clutario</a>.
+        {% endblock %}
+    </div>
+</body>
+</html>
