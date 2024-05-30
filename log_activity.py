@@ -1,5 +1,6 @@
 import os
 import math
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -27,6 +28,18 @@ def get_active_window(
     return active_window
 
 
+def tmux_get_display():
+    tmux_out: subprocess.CompletedProcess = subprocess.run(
+        ["tmux", "display-message", "-p"], capture_output=True
+    )
+
+    tmux_display: str = ""
+    if tmux_out.returncode == 0:
+        tmux_display = tmux_out.stdout.decode().strip()
+
+    return tmux_display
+
+
 def get_window_properties(window: xobject.drawable.Window) -> dict:
     class_name: str = ""
     window_name: str = ""
@@ -48,6 +61,9 @@ def get_window_properties(window: xobject.drawable.Window) -> dict:
 
     if temp_window_name is not None:
         window_name = temp_window_name.value.decode()
+
+    if window_name == "Alacritty":
+        window_name = tmux_get_display()
 
     geometry: protocol.request.GetGeometry = window.get_geometry()
 
@@ -101,11 +117,18 @@ def create_html_report(
     timestamp: datetime,
 ) -> str:
     datetimestr: str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+
+    screenshot_cell: str = "<td>no screenshot</td></tr>"
+    if screenshot_file_name != "":
+        screenshot_cell = (
+            f'<td><a href="{screenshot_file_name}">screenshot</a></td></tr>'
+        )
+
     html_log_str: str = (
         f"<tr><td>{datetimestr}</td>"
         + f"<td>{window_props["window_class"]}</td>"
         + f"<td>{window_props["window_name"]}</td>"
-        + f'<td><a href="{screenshot_file_name}">screenshot</a></td></tr>'
+        + screenshot_cell
     )
 
     table_file: Path = outpath.joinpath("tablecontents.html")
@@ -129,6 +152,11 @@ def create_html_report(
 
 
 def main() -> None:
+    log_frequency = 10  # seconds
+    prev_window_name: str = ""
+    window_occurence_counter: int = 0
+    occurence_counter_limit: int = 18  # 2 minutes
+
     disp_obj: display.Display = display.Display()
 
     while True:
@@ -138,6 +166,13 @@ def main() -> None:
 
         if active_window is not None:
             active_window_props: dict = get_window_properties(active_window)
+            window_name: str = active_window_props["window_name"]
+
+            if prev_window_name == window_name:
+                window_occurence_counter += 1
+            else:
+                window_occurence_counter = 0
+                prev_window_name = window_name
 
             timestamp: datetime = datetime.now()
             second_val: int = math.floor(timestamp.second) // 10 * 10
@@ -158,9 +193,15 @@ def main() -> None:
                 hour_outpath.mkdir(parents=True, exist_ok=True)
 
             datetimestr: str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-            screenshot_file_name: str = save_screenshot(
-                active_window, active_window_props, hour_outpath, datetimestr
-            )
+            screenshot_file_name: str = ""
+
+            if window_occurence_counter < occurence_counter_limit:
+                screenshot_file_name = save_screenshot(
+                    active_window,
+                    active_window_props,
+                    hour_outpath,
+                    datetimestr,
+                )
 
             create_html_report(
                 active_window_props,
@@ -171,13 +212,18 @@ def main() -> None:
 
             log_str: str = (
                 f"{datetimestr}: "
+                + f"{window_occurence_counter} "
                 + f"{active_window_props["window_class"]} -- "
-                + f"{active_window_props["window_name"]}"
+                + f"{window_name}"
             )
 
             print(log_str)
 
-            time.sleep(10)
+            time.sleep(log_frequency)
+
+        else:
+            window_occurence_counter = 0
+            prev_window_name = ""
 
 
 if __name__ == "__main__":
